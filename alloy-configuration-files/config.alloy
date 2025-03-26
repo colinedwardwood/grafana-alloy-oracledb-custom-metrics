@@ -44,7 +44,7 @@ prometheus.remote_write "metrics_service" {
 
     basic_auth {
       username = 655559
-      password_file =  "./credentials/api-key.txt"
+      password_file =  "/etc/alloy/api-key.txt"
     }
   }
 }
@@ -55,7 +55,7 @@ loki.write "grafana_cloud_loki" {
 
     basic_auth {
       username = 326750
-      password_file =  "./credentials/api-key.txt"
+      password_file =  "/etc/alloy/api-key.txtt"
     }
   }
 }

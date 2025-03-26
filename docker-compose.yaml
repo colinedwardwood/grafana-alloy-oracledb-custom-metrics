@@ -54,6 +54,7 @@ services:
       - "12345:12345"
     volumes:
       - ./alloy-configuration-files/config.alloy:/etc/alloy/config.alloy
+      - ./alloy-configuration-files/api-key.txt/:/etc/alloy/api-key.txt
       - ./alloy-configuration-files/oracledb-a-custom-metrics.toml:/etc/alloy/oracledb-a-custom-metrics.toml
       - ./alloy-configuration-files/oracledb-b-custom-metrics.toml:/etc/alloy/oracledb-b-custom-metrics.toml
 
