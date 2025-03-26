@@ -1,0 +1,85 @@
+name: oracledb-exporter-demo
+
+networks:
+  demo-net:
+    driver: bridge
+
+services:
+  oracledb-a:
+    image: container-registry.oracle.com/database/free:latest-lite
+    container_name: oracledb-a
+    hostname: oracledb-a.demo.internal
+    ports:
+      - "1500:1521"  # Forwarding port 1521
+    environment:
+      - ORACLE_PWD=Oracle
+    volumes:
+      - ./oracledb-startup-scripts:/opt/oracle/scripts/startup
+    networks:
+      demo-net:
+        aliases:
+          - oracledb-a.demo.internal
+    healthcheck:
+      test: ["CMD", "sqlplus", "-L", "system/Oracle@//localhost:1521/FREEPDB1", "@SELECT 1 FROM DUAL"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  oracledb-b:
+    image: container-registry.oracle.com/database/free:latest-lite
+    container_name: oracledb-b
+    ports:
+      - "1600:1521"
+    environment:
+      - ORACLE_PWD=Oracle
+    volumes:
+      - ./oracledb-startup-scripts:/opt/oracle/scripts/startup
+    networks:
+      demo-net:
+        aliases:
+          - oracledb-b.demo.internal
+    healthcheck:
+      test: ["CMD", "sqlplus", "-L", "system/Oracle@//localhost:1521/FREEPDB1", "@SELECT 1 FROM DUAL"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    hostname: alloy.demo.internal
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy-configuration-files/config.alloy:/etc/alloy/config.alloy
+      - ./alloy-configuration-files/oracledb-a-custom-metrics.toml:/etc/alloy/oracledb-a-custom-metrics.toml
+      - ./alloy-configuration-files/oracledb-b-custom-metrics.toml:/etc/alloy/oracledb-b-custom-metrics.toml
+
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    depends_on:
+      oracledb-a:
+        condition: service_healthy
+      oracledb-b:
+        condition: service_healthy
+    networks:
+      demo-net:
+        aliases:
+          - alloy.demo.internal
+    
+    restart: unless-stopped
+
+  # workstation:
+  #   image: ubuntu:24.04
+  #   container_name: workstation
+  #   networks:
+  #     demo-net:
+  #       aliases:
+  #         - workstation.demo.internal
+  #   stdin_open: true  # Keeps STDIN open for interactive processes
+  #   tty: true         # Allocates a TTY for interactive use
+  #   command: sleep infinity  # Keeps the container running indefinitely
+  #   environment:
+  #     - DEBIAN_FRONTEND=noninteractive
+  #   entrypoint: ["/bin/bash", "-c", "apt update && apt install -y wget curl vim nano unzip openjdk-17-jdk && sleep infinity"]

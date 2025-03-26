@@ -1,0 +1,4 @@
+[[metric]]
+context = "cache_hit_ratio"
+metricsdesc = {percentage="Gauge metric with the cache hit ratio."}
+request = "select Round(((Sum(Decode(a.name, 'consistent gets', a.value, 0)) + Sum(Decode(a.name, 'db block gets', a.value, 0)) - Sum(Decode(a.name, 'physical reads', a.value, 0))  )/ (Sum(Decode(a.name, 'consistent gets', a.value, 0)) + Sum(Decode(a.name, 'db block gets', a.value, 0)))) *100,2) as percentage FROM v$sysstat a"

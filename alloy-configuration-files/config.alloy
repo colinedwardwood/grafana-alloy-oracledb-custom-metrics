@@ -1,0 +1,109 @@
+// ──────────────────── Alloy Monitoring     ────────────────────
+prometheus.exporter.self "alloy_check" { }
+
+discovery.relabel "alloy_check" {
+  targets = prometheus.exporter.self.alloy_check.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "alloy_hostname"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/alloy-check"
+  }
+}
+
+prometheus.scrape "alloy_check" {
+  targets    = discovery.relabel.alloy_check.output
+  forward_to = [prometheus.relabel.alloy_check.receiver]
+
+  scrape_interval = "60s"
+}
+
+prometheus.relabel "alloy_check" {
+  forward_to = [prometheus.remote_write.metrics_service.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "(prometheus_target_sync_length_seconds_sum|prometheus_target_scrapes_.*|prometheus_target_interval.*|prometheus_sd_discovered_targets|alloy_build.*|prometheus_remote_write_wal_samples_appended_total|process_start_time_seconds)"
+    action        = "keep"
+  }
+}
+
+// ─────────── Storage (Common for all metrics and logs) ────────
+prometheus.remote_write "metrics_service" {
+  endpoint {
+    url = "https://prometheus-us-central1.grafana.net/api/prom/push"
+
+    basic_auth {
+      username = 655559
+      password_file =  "./credentials/api-key.txt"
+    }
+  }
+}
+
+loki.write "grafana_cloud_loki" {
+  endpoint {
+    url = "https://logs-prod3.grafana.net/loki/api/v1/push"
+
+    basic_auth {
+      username = 326750
+      password_file =  "./credentials/api-key.txt"
+    }
+  }
+}
+
+// ──────────────────── Oracle Integration   ────────────────────
+// Notes:
+// The Oracle Integration works as follows:
+// 1. The `prometheus.exporter.oracledb` component is used to instantiate an Oracle DB exporter. This creates an
+//    internal to Alloy OracleDB exporter which can be scraped by a `prometheus.scrape` component.
+//    One is needed per database to be scraped. Use the component name to distinguish among the different databases.
+//    Arguments: The only required argument is the connection string. 
+//    Exported fields: targets as list(map(string))
+//
+// 2. A discovery relabel component to standardize the instance and job labels on the targets exported by the `prometheus.exporter.oracledb` component.
+//
+// 3. A single `prometheus.scrape` component can be used to scrape the output of the relabel component
+// ──────────────────────────────────────────────────────────────
+
+// 1. Instantiate an OracleDB exporter for each database to be scraped.
+prometheus.exporter.oracledb "integrations_oracledb_a" {
+    connection_string = "oracle://grafanau:Oracle@oracledb-a.demo.internal:1521/FREEPDB1"
+    custom_metrics = "/etc/alloy/oracledb-a-custom-metrics.toml"
+}
+prometheus.exporter.oracledb "integrations_oracledb_b" {
+    connection_string = "oracle://grafanau:Oracle@oracledb-b.demo.internal:1521/FREEPDB1"
+    custom_metrics = "/etc/alloy/oracledb-b-custom-metrics.toml"
+}
+
+// 2. Apply relabel rules to the targets exported by the `prometheus.exporter.oracledb` components above
+discovery.relabel "integrations_oracledb" {
+    targets = array.concat(prometheus.exporter.oracledb.integrations_oracledb_a.targets,prometheus.exporter.oracledb.integrations_oracledb_b.targets)
+
+    rule {
+        target_label = "instance"
+        replacement  = constants.hostname
+    }
+
+    rule {
+        target_label = "job"
+        replacement  = "integrations/oracledb"
+    }
+}
+
+// 3. Scrape the targets exported 
+prometheus.scrape "integrations_oracledb" {
+        targets         = discovery.relabel.integrations_oracledb.output
+        forward_to      = [prometheus.remote_write.metrics_service.receiver]
+        job_name        = "integrations/oracledb"
+        scrape_interval = "5m0s"
+        scrape_timeout  = "1m0s"
+}

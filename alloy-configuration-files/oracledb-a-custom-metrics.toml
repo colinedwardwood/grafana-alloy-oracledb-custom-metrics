@@ -1,0 +1,4 @@
+[[metric]]
+context = "custom"
+metricsdesc = { session_cpu= "Gauge metric with cpu time."}
+request = "SELECT value as session_cpu FROM v$sysstat WHERE name IN ('CPU used by this session')" 
