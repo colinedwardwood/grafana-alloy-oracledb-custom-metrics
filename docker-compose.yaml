@@ -50,11 +50,12 @@ services:
     image: grafana/alloy:latest
     container_name: alloy
     hostname: alloy.demo.internal
+    env_file:
+      - ./alloy-configuration-files/.env
     ports:
       - "12345:12345"
     volumes:
       - ./alloy-configuration-files/config.alloy:/etc/alloy/config.alloy
-      - ./alloy-configuration-files/api-key.txt/:/etc/alloy/api-key.txt
       - ./alloy-configuration-files/oracledb-a-custom-metrics.toml:/etc/alloy/oracledb-a-custom-metrics.toml
       - ./alloy-configuration-files/oracledb-b-custom-metrics.toml:/etc/alloy/oracledb-b-custom-metrics.toml
 
@@ -70,17 +71,3 @@ services:
           - alloy.demo.internal
     
     restart: unless-stopped
-
-  # workstation:
-  #   image: ubuntu:24.04
-  #   container_name: workstation
-  #   networks:
-  #     demo-net:
-  #       aliases:
-  #         - workstation.demo.internal
-  #   stdin_open: true  # Keeps STDIN open for interactive processes
-  #   tty: true         # Allocates a TTY for interactive use
-  #   command: sleep infinity  # Keeps the container running indefinitely
-  #   environment:
-  #     - DEBIAN_FRONTEND=noninteractive
-  #   entrypoint: ["/bin/bash", "-c", "apt update && apt install -y wget curl vim nano unzip openjdk-17-jdk && sleep infinity"]

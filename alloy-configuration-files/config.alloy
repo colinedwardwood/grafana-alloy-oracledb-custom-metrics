@@ -40,22 +40,22 @@ prometheus.relabel "alloy_check" {
 // ─────────── Storage (Common for all metrics and logs) ────────
 prometheus.remote_write "metrics_service" {
   endpoint {
-    url = "https://prometheus-us-central1.grafana.net/api/prom/push"
+    url = sys.env("GRAFANA_CLOUD_METRICS_ENDPOINT")
 
     basic_auth {
-      username = 655559
-      password_file =  "/etc/alloy/api-key.txt"
+      username = sys.env("GRAFANA_CLOUD_METRICS_USER")
+      password = sys.env("GRAFANA_CLOUD_METRICS_API_KEY")
     }
   }
 }
 
 loki.write "grafana_cloud_loki" {
   endpoint {
-    url = "https://logs-prod3.grafana.net/loki/api/v1/push"
+    url = sys.env("GRAFANA_CLOUD_LOGS_ENDPOINT")
 
     basic_auth {
-      username = 326750
-      password_file =  "/etc/alloy/api-key.txtt"
+      username = sys.env("GRAFANA_CLOUD_LOGS_USER")
+      password = sys.env("GRAFANA_CLOUD_LOGS_API_KEY")
     }
   }
 }
