@@ -45,7 +45,7 @@ This example assumes you have the following installed:
     d. Run the following queries to see the custom metrics:
 
     ```promql
-    oracledb_custom_session_cpu{instance="alloy.demo.internal", job="integrations/oracledb"}
+    oracledb_cache_hit_ratio_percentage{instance="alloy.demo.internal",job="integrations/oracledb", db_instance="oracledb-b"}
     ```
 
     ```promql

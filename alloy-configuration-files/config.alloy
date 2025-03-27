@@ -69,24 +69,22 @@ loki.write "grafana_cloud_loki" {
 //    Arguments: The only required argument is the connection string. 
 //    Exported fields: targets as list(map(string))
 //
-// 2. A discovery relabel component to standardize the instance and job labels on the targets exported by the `prometheus.exporter.oracledb` component.
+// 2. A discovery relabel component per database exporter to standardize the instance and job labels on the targets 
+//    exported by the `prometheus.exporter.oracledb` component. One per database exporter is needed to apply the individual 
+//    database labels. Use the component name to distinguish among the different databases.
 //
-// 3. A single `prometheus.scrape` component can be used to scrape the output of the relabel component
+// 3. A single `prometheus.scrape` component can be used to scrape the output of the relabel components
 // ──────────────────────────────────────────────────────────────
 
-// 1. Instantiate an OracleDB exporter for each database to be scraped.
+// 1. Instantiate an OracleDB exporter for each database to be scraped
+// 2. Pair the targets exported by the OracleDB exporter with the relabel rules
+// ---- oracledb-a ----
 prometheus.exporter.oracledb "integrations_oracledb_a" {
     connection_string = "oracle://grafanau:Oracle@oracledb-a.demo.internal:1521/FREEPDB1"
     custom_metrics = "/etc/alloy/oracledb-a-custom-metrics.toml"
 }
-prometheus.exporter.oracledb "integrations_oracledb_b" {
-    connection_string = "oracle://grafanau:Oracle@oracledb-b.demo.internal:1521/FREEPDB1"
-    custom_metrics = "/etc/alloy/oracledb-b-custom-metrics.toml"
-}
-
-// 2. Apply relabel rules to the targets exported by the `prometheus.exporter.oracledb` components above
-discovery.relabel "integrations_oracledb" {
-    targets = array.concat(prometheus.exporter.oracledb.integrations_oracledb_a.targets,prometheus.exporter.oracledb.integrations_oracledb_b.targets)
+discovery.relabel "integrations_oracledb_a" {
+    targets = prometheus.exporter.oracledb.integrations_oracledb_a.targets
 
     rule {
         target_label = "instance"
@@ -97,11 +95,39 @@ discovery.relabel "integrations_oracledb" {
         target_label = "job"
         replacement  = "integrations/oracledb"
     }
+
+    rule {
+        target_label = "db_instance"
+        replacement  = "oracledb-a"
+    }
+}
+// ---- oracledb-b ----
+prometheus.exporter.oracledb "integrations_oracledb_b" {
+    connection_string = "oracle://grafanau:Oracle@oracledb-b.demo.internal:1521/FREEPDB1"
+    custom_metrics = "/etc/alloy/oracledb-b-custom-metrics.toml"
+}
+discovery.relabel "integrations_oracledb_b" {
+    targets = prometheus.exporter.oracledb.integrations_oracledb_b.targets
+
+    rule {
+        target_label = "instance"
+        replacement  = constants.hostname
+    }
+
+    rule {
+        target_label = "job"
+        replacement  = "integrations/oracledb"
+    }
+
+    rule {
+        target_label = "db_instance"
+        replacement  = "oracledb-b"
+    }
 }
 
 // 3. Scrape the targets exported 
 prometheus.scrape "integrations_oracledb" {
-        targets         = discovery.relabel.integrations_oracledb.output
+        targets         = array.concat(discovery.relabel.integrations_oracledb_a.output, discovery.relabel.integrations_oracledb_b.output)
         forward_to      = [prometheus.remote_write.metrics_service.receiver]
         job_name        = "integrations/oracledb"
         scrape_interval = "5m0s"
