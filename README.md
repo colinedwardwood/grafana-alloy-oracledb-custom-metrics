@@ -39,10 +39,10 @@ This example assumes you have the following installed:
 
 5. Validate the Metrics are being collected
 
-    a. Navigate to your Grafana Cloud instance.
-    b. Click on "Explore" in the left-hand menu.
-    c. Select the Prometheus data source.
-    d. Run the following queries to see the custom metrics:
+    a. Navigate to your Grafana Cloud instance.  
+    b. Click on "Explore" in the left-hand menu.  
+    c. Select the Prometheus data source.  
+    d. Run the following queries to see the custom metrics:  
 
     ```promql
     oracledb_cache_hit_ratio_percentage{instance="alloy.demo.internal",job="integrations/oracledb", db_instance="oracledb-b"}
